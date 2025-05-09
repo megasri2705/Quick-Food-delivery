@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Grocery App with Login</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Login Section -->
+<div class="login-box" id="loginBox">
+  <h2>Login</h2>
+  <input type="text" id="username" placeholder="Enter username" required>
+  <input type="password" id="password" placeholder="Enter password" required>
+  <button onclick="login()">Login</button>
+  <p id="loginError" style="color:red;"></p>
+</div>
+
+<!-- Grocery App Section -->
+<div class="grocery-app hidden" id="groceryApp">
+  <h1>Welcome to Grocery App</h1>
+  <div class="product-list" id="productList"></div>
+
+  <h2>Cart</h2>
+  <ul id="cart"></ul>
+  <p id="total">Total Rs 0</p>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
+
+
+body {
+  font-family: Arial, sans-serif;
+  margin: 20px;
+}
+
+.hidden {
+  display: none;
+}
+
+.login-box,
+.grocery-app {
+  max-width: 400px;
+  margin: auto;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+}
+
+.product-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.product {
+  border: 1px solid #ccc;
+  padding: 10px;
+  border-radius: 6px;
+}
+
+button {
+  padding: 5px 10px;
+  background-color: green;
+  color: white;
+  border: none;
+  margin-top: 5px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: darkgreen;
+}
+
+input[type="text"],
+input[type="password"] {
+  width: 100%;
+  padding: 8px;
+  margin: 8px 0;
+  box-sizing: border-box;
+}
+
+#cart {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+h2 {
+  margin-top: 30px;
+}
+
+
+@RestController
+@RequestMapping("/api")
+@SessionAttributes("username")
+public class UserController {
+
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody Map<String, String> creds, HttpSession session) {
+        String user = creds.get("username");
+        String pass = creds.get("password");
+
+        if ("user".equals(user) && "pass".equals(pass)) {
+            session.setAttribute("username", user);
+            return ResponseEntity.ok("Login successful");
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
+        }
+    }
+}
+
+
+@RestController
+@RequestMapping("/api")
+public class ProductController {
+
+    private final List<Product> products = Arrays.asList(
+        new Product("Tomato", 20),
+        new Product("Milk", 50),
+        new Product("Rice", 60),
+        new Product("Bread", 30),
+        new Product("Onion", 25),
+        new Product("Eggs", 40),
+        new Product("Apple", 90),
+        new Product("Banana", 50),
+        new Product("Wheat Flour", 45),
+        new Product("Oil", 120)
+    );
+
+    @GetMapping("/products")
+    public List<Product> getProducts() {
+        return products;
+    }
+}
+
+
+public class Product {
+    private String name;
+    private int price;
+
+    public Product() {}
+
+    public Product(String name, int price) {
+        this.name = name;
+        this.price = price;
+    }
+
+    // Getters and Setters
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public int getPrice() { return price; }
+    public void setPrice(int price) { this.price = price; }
+}
+
+
+@RestController
+@RequestMapping("/api")
+@SessionAttributes("cart")
+public class CartController {
+
+    @PostMapping("/cart/add")
+    public ResponseEntity<?> addToCart(@RequestBody Product product, HttpSession session) {
+        Map<String, CartItem> cart = (Map<String, CartItem>) session.getAttribute("cart");
+
+        if (cart == null) {
+            cart = new HashMap<>();
+        }
+
+        if (cart.containsKey(product.getName())) {
+            CartItem item = cart.get(product.getName());
+            item.setQuantity(item.getQuantity() + 1);
+            item.setTotal(item.getQuantity() * item.getPrice());
+        } else {
+            cart.put(product.getName(), new CartItem(product.getName(), product.getPrice(), 1, product.getPrice()));
+        }
+
+        session.setAttribute("cart", cart);
+        return ResponseEntity.ok(cart.values());
+    }
+
+    @GetMapping("/cart")
+    public Collection<CartItem> getCart(HttpSession session) {
+        Map<String, CartItem> cart = (Map<String, CartItem>) session.getAttribute("cart");
+        return cart == null ? List.of() : cart.values();
+    }
+}
+
+
+
+public class CartItem {
+    private String name;
+    private int price;
+    private int quantity;
+    private int total;
+
+    public CartItem() {}
+
+    public CartItem(String name, int price, int quantity, int total) {
+        this.name = name;
+        this.price = price;
+        this.quantity = quantity;
+        this.total = total;
+    }
+
+    // Getters and Setters
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public int getPrice() { return price; }
+    public void setPrice(int price) { this.price = price; }
+
+    public int getQuantity() { return quantity; }
+    public void setQuantity(int quantity) { this.quantity = quantity; }
+
+    public int getTotal() { return total; }
+    public void setTotal(int total) { this.total = total; }
+}
+
+
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
